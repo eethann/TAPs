@@ -89,12 +89,10 @@ function softcut_init()
   for playhead=1,6 do
     softcut.buffer(playhead, 1)
     softcut.enable(playhead, 1)
-    -- set loop points for each head so they are separate delays
     softcut.loop_start(playhead,loop_start_time(playhead))
     softcut.loop_end(playhead,loop_end_time(playhead))
     softcut.position(playhead, loop_start_time(playhead))
     softcut.loop(playhead, 1)
-    -- TODO determine if we can use level_cut_cut(X,X) for feedback or need to use pre_level
     softcut.pre_level(playhead, 0)
     softcut.rec_level(playhead, 1)
     softcut.play(playhead, 1)
@@ -122,7 +120,8 @@ function softcut_update()
     softcut.level(playhead, out_states[playhead] * out_levels[playhead])
     softcut.pan(playhead, out_pans[playhead]) 
     for source=1,6 do
-      route_level = route_level_mult*route_states[route_index(playhead,source)]*route_levels[route_index(playhead,source)]
+      local idx = route_index(playhead, source)
+      route_level = route_level_mult*route_states[idx]*route_levels[idx]
       if (source == playhead) then
         softcut.pre_level(playhead,route_level)
       else
