@@ -115,8 +115,10 @@ function softcut_update()
     -- TODO offer option for speed (tape) or buffer len (digital) time control
     softcut.loop_end(recordhead,loop_end_time(recordhead))
     -- TODO immplement proper panning
-    softcut.level_input_cut(1,recordhead,util.linlin(-1,1,0,1,state.in_pans[recordhead]) * state.in_gates[recordhead] * state.in_levels[recordhead] * state.in_level_mult)
-    softcut.level_input_cut(2,recordhead,util.linlin(1,-1,0,1,state.in_pans[recordhead]) * state.in_gates[recordhead] * state.in_levels[recordhead] * state.in_level_mult)
+    local in_1_level = util.linlin(-1,1,0,1,state.in_pans[recordhead]) * state.in_gates[recordhead] * state.in_levels[recordhead] * state.in_level_mult
+    local in_2_level = util.linlin(1,-1,0,1,state.in_pans[recordhead]) * state.in_gates[recordhead] * state.in_levels[recordhead] * state.in_level_mult
+    softcut.level_input_cut(1,recordhead,in_1_level)
+    softcut.level_input_cut(2,recordhead,in_2_level)
     softcut.level(recordhead, state.out_gates[recordhead] * state.out_levels[recordhead])
     softcut.pan(recordhead, state.out_pans[recordhead]) 
     for source=1,6 do
@@ -125,7 +127,7 @@ function softcut_update()
       if (source == recordhead) then
         softcut.pre_level(recordhead,route_level)
       else
-        print("UPDATE ROUTE " .. source .. "--" .. route_level .. "-->" .. recordhead)
+        print("UPDATE ROUTE " .. source .. "-" .. route_level .. "->" .. recordhead)
         softcut.level_cut_cut(source,recordhead,route_level)
       end
     end
