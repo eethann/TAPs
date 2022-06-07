@@ -3,6 +3,10 @@
 
 local grid = util.file_exists(_path.code.."midigrid") and include "midigrid/lib/mg_128" or grid
 g = grid.connect()
+saved_states = {}
+state = {}
+active_state = 1
+
 
 -- TODO allow 7 switchable configurations (may rework data structure into just 2 matrices)
 -- TODO refactor this into a UI lib
@@ -11,31 +15,29 @@ local focus = { x = 1, y = 1, brightness = 15 }
 local keys_status = {0,0,0}
 local sliders = {}
 local slider_mode = 0
-local grid_slider_mode = 0
+local grid_mode = 0
 
-state = {
-  in_gates = {},
-  out_gates = {},
-  route_gates = {},
-  in_levels = {},
-  out_levels = {},
-  route_levels = {},
-  in_pans = {},
-  out_pans = {},
-  in_level_mult = 1.0,
-  route_level_mult = 1.0,
-  delay_times = {},
-}
-
-function init()
-  -- TODO refactor this to be 0 indexed, 1 base is a pain
+function default_state() 
+  local state = {
+    in_gates = {},
+    out_gates = {},
+    route_gates = {},
+    in_levels = {},
+    out_levels = {},
+    route_levels = {},
+    in_pans = {},
+    out_pans = {},
+    in_level_mult = 1.0,
+    route_level_mult = 1.0,
+    delay_times = {},
+  }
   for i=1,6 do
     state.in_gates[i] = 0
     state.in_levels[i] = 0.9
     state.out_gates[i] = 1
     state.out_levels[i] = 0.9
     state.out_pans[i] = -0.75 + 0.75 * (i % 3)
-    state.in_pans[i] = 0.75 - 1.5 * (i % 2)
+    state.in_pans[i] = 1 - 2 * (i % 2)
     state.delay_times[i] = 0.25*i
     for j=1,6 do
       state.route_levels[route_index(i,j)] = 0.75
@@ -46,6 +48,28 @@ function init()
   for i=0,5 do
     state.route_gates[route_index(((i+1)%6)+1,i+1)] = 1
   end
+  return state
+end
+
+function load_state(i) 
+  state = saved_states[i]
+  active_state = i
+  update()
+end
+
+function save_state(i)
+  saved_states[i] = state
+  active_state = i
+  update()
+end
+
+function init()
+  -- TODO make better defaults
+  for i=1,6 do
+    saved_states[i] = default_state()
+  end
+  load_state(1)
+  -- TODO refactor this to be 0 indexed, 1 base is a pain
   screen_init()
   softcut_init()
   update()
@@ -149,9 +173,11 @@ end
 
 -- TODO handle connect and disconnect, assign key func on connect
 g.key = function(x,y,z)
-  if y == 8 and x == 8 then
-    grid_slider_mode = z
-  elseif (grid_slider_mode == 0) then
+  if y == 1 and x == 8 then
+    grid_mode = z
+  elseif y == 8 and x == 1 then
+    grid_mode = z * 2
+  elseif (grid_mode == 0) then
     if z == 1 then
       if y < 7 then
         if (x == 1) then
@@ -162,10 +188,13 @@ g.key = function(x,y,z)
         end
       elseif y == 7 then
         state.out_gates[x-1] = toggle(state.out_gates[x-1])
+      elseif y == 8 and x > 1 and x < 8 then
+        -- TODO should we save the current state before loading by default?
+        load_state(x-1)
       end
       focus = { x = x, y = y}
     end
-  else
+  elseif grid_mode == 1 then
     if z == 1 then
       if x < 8 and y < 8 then
         focus = { x = x, y = y}
@@ -175,6 +204,12 @@ g.key = function(x,y,z)
         update_slider_val(2,(x-4))
       end
     end
+  elseif grid_mode == 2 then
+    if z == 1 then
+      if y == 8 and x > 1 and x < 8 then
+        save_state(x-1)
+      end
+    end  
   end
   update()
 end
@@ -188,6 +223,7 @@ function grid_redraw()
       g:led(j+1,i,state.route_gates[route_index(i,j)] == 1 and 15 or 1)
     end
     g:led(i+1,7,state.out_gates[i] == 1 and 15 or 1)
+    g:led(i+1,8,active_state == i and 15 or 1)
   end
   g:refresh()
 end
