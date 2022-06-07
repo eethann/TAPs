@@ -48,12 +48,19 @@ function init()
   end
   screen_init()
   softcut_init()
+  update()
+end
+
+function update()
+  -- TODO add clean / dirty flags to eliminate unneeded re-renders
   softcut_update()
   redraw()
   grid_redraw()
 end
 
 function route_index(destination, source) 
+  -- TODO update this to make it more sensible for 1 indexed tables
+  -- (currently wasting the first 6 entries in the array)
   return destination * 6 + source
 end
 
@@ -114,11 +121,13 @@ function softcut_update()
   for recordhead=1,6 do
     -- TODO offer option for speed (tape) or buffer len (digital) time control
     softcut.loop_end(recordhead,loop_end_time(recordhead))
-    -- TODO immplement proper panning
-    local in_1_level = util.linlin(-1,1,0,1,state.in_pans[recordhead]) * state.in_gates[recordhead] * state.in_levels[recordhead] * state.in_level_mult
-    local in_2_level = util.linlin(1,-1,0,1,state.in_pans[recordhead]) * state.in_gates[recordhead] * state.in_levels[recordhead] * state.in_level_mult
-    softcut.level_input_cut(1,recordhead,in_1_level)
-    softcut.level_input_cut(2,recordhead,in_2_level)
+    -- TODO immplement proper log panning, not linear
+    local in_1_pan_amt = 0.5 + 0.5 * state.in_pans[recordhead]
+    local in_2_pan_amt = 0.5 - 0.5 * state.in_pans[recordhead]
+    local in_base_level = state.in_gates[recordhead] * state.in_levels[recordhead] * state.in_level_mult
+    print("in levels: " .. in_1_pan_amt .. " and " .. in_2_pan_amt .. ", " .. in_base_level)
+    softcut.level_input_cut(1,recordhead,in_1_pan_amt * in_base_level)
+    softcut.level_input_cut(2,recordhead,in_2_pan_amt * in_base_level)
     softcut.level(recordhead, state.out_gates[recordhead] * state.out_levels[recordhead])
     softcut.pan(recordhead, state.out_pans[recordhead]) 
     for source=1,6 do
@@ -167,9 +176,7 @@ g.key = function(x,y,z)
       end
     end
   end
-  redraw()
-  softcut_update()
-  grid_redraw()
+  update()
 end
 
 function grid_redraw()
@@ -212,9 +219,7 @@ function key(n,z)
     end 
   end
   -- may trigger unneeded updates
-  softcut_update()
-  grid_redraw()
-  redraw()
+  update()
 end
 
 function update_slider_val(n,d)
@@ -245,9 +250,7 @@ function update_slider_val(n,d)
     elseif n == 2 then
     end
   end
-  softcut_update()
-  redraw()
-  grid_redraw()
+  update()
 end
 
 -- TODO implement encode functionality via 8th col on grid
